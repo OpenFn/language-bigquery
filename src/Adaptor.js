@@ -130,7 +130,6 @@ export function load(
         throw errors;
       }
 
-      console.log('hello?');
       return state;
     }
     return loadData();
@@ -182,6 +181,8 @@ export function parseCSV(target, config) {
     });
   };
 }
+
+exports.fs = fs;
 
 export {
   alterState,
