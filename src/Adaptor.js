@@ -1,6 +1,7 @@
 /** @module Adaptor */
 import { req, rawRequest } from './Client';
 import { setAuth, setUrl } from './Utils';
+import 'regenerator-runtime/runtime.js';
 import {
   execute as commonExecute,
   expandReferences,
@@ -10,6 +11,7 @@ import cheerio from 'cheerio';
 import cheerioTableparser from 'cheerio-tableparser';
 import fs from 'fs';
 import parse from 'csv-parse';
+import { BigQuery } from '@google-cloud/bigquery';
 
 /**
  * Execute a sequence of operations.
@@ -82,36 +84,57 @@ export function fetch(getRequest) {
 }
 
 export function unzip(pathToCsv) {
-  // something that unzips from a CSV and allows the output to be used for hte
+  // something that unzips from a CSV and allows the output to be used for the
   // input of `load(data, options)`
 }
 
-export function load(data, options) {
+export function load(
+  fileName,
+  projectId,
+  datasetId,
+  tableId,
+  loadOptions,
+  callback
+) {
   // something that loads data (from a CSV?) to BigQuery
-  state => {
-    const schema = 'Name:STRING, Age:INTEGER, Weight:FLOAT, IsMagic:BOOLEAN';
+  return state => {
+    const bigquery = new BigQuery({
+      credentials: state.configuration,
+      projectId,
+    });
+    // In this example, the existing table contains only the 'Name', 'Age',
+    // & 'Weight' columns. 'REQUIRED' fields cannot  be added to an existing
+    // schema, so the additional column must be 'NULLABLE'.
+    async function loadData() {
       // Retrieve destination table reference
-      const [table] = await bigquery
-        .dataset(datasetId)
-        .table(tableId)
-        .get();
+      const [table] = await bigquery.dataset(datasetId).table(tableId).get();
+
       const destinationTableRef = table.metadata.tableReference;
+
       // Set load job options
-      const options = {
-        schema: schema,
-        schemaUpdateOptions: ['ALLOW_FIELD_ADDITION'],
-        writeDisposition: 'WRITE_APPEND',
-        destinationTable: destinationTableRef,
-      };
+      const options = { ...loadOptions, destinationTableRef };
+
       // Load data from a local file into the table
       const [job] = await bigquery
         .dataset(datasetId)
         .table(tableId)
         .load(fileName, options);
+
       console.log(`Job ${job.id} completed.`);
       console.log('New Schema:');
       console.log(job.configuration.load.schema.fields);
-  }
+
+      // Check the job's status for errors
+      const errors = job.status.errors;
+      if (errors && errors.length > 0) {
+        throw errors;
+      }
+
+      console.log('hello?');
+      return state;
+    }
+    return loadData();
+  };
 }
 
 /**
