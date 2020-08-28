@@ -11,6 +11,8 @@ import cheerio from 'cheerio';
 import cheerioTableparser from 'cheerio-tableparser';
 import fs from 'fs';
 import parse from 'csv-parse';
+import AdmZip from 'adm-zip';
+import request from 'request';
 import { BigQuery } from '@google-cloud/bigquery';
 
 /**
@@ -79,13 +81,39 @@ export function get(path, params, callback) {
   };
 }
 
-export function fetch(getRequest) {
+export function fetch(urlToFile) {
+  return state => {
+    return new Promise((resolve, reject) => {
+      request(
+        { url: urlToFile, method: 'GET', encoding: null },
+        (err, res, body) => {
+          console.log(body);
+          resolve(body);
+          //state.data.body = body;
+        }
+      );
+    }).then(data => {
+      return { ...state, response: { body: data } };
+    });
+  };
   // make a get and unzip the response
 }
 
-export function unzip(pathToCsv) {
-  // something that unzips from a CSV and allows the output to be used for the
+export function unzip(pathToSave) {
+  // something that unzips from a CSV and allows the output to be used for hte
   // input of `load(data, options)`
+
+  return state => {
+    let { response } = state;
+    console.log(response.body);
+
+    const zip = new AdmZip(response.body);
+    const zipEntries = zip.getEntries();
+    console.log(zipEntries.length);
+    zip.extractAllTo(pathToSave, true);
+
+    return state;
+  };
 }
 
 export function load(
