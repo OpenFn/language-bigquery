@@ -88,6 +88,30 @@ export function unzip(pathToCsv) {
 
 export function load(data, options) {
   // something that loads data (from a CSV?) to BigQuery
+  state => {
+    const schema = 'Name:STRING, Age:INTEGER, Weight:FLOAT, IsMagic:BOOLEAN';
+      // Retrieve destination table reference
+      const [table] = await bigquery
+        .dataset(datasetId)
+        .table(tableId)
+        .get();
+      const destinationTableRef = table.metadata.tableReference;
+      // Set load job options
+      const options = {
+        schema: schema,
+        schemaUpdateOptions: ['ALLOW_FIELD_ADDITION'],
+        writeDisposition: 'WRITE_APPEND',
+        destinationTable: destinationTableRef,
+      };
+      // Load data from a local file into the table
+      const [job] = await bigquery
+        .dataset(datasetId)
+        .table(tableId)
+        .load(fileName, options);
+      console.log(`Job ${job.id} completed.`);
+      console.log('New Schema:');
+      console.log(job.configuration.load.schema.fields);
+  }
 }
 
 /**
