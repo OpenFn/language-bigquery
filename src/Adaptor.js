@@ -10,6 +10,8 @@ import cheerio from 'cheerio';
 import cheerioTableparser from 'cheerio-tableparser';
 import fs from 'fs';
 import parse from 'csv-parse';
+import AdmZip from 'adm-zip';
+import request from 'request';
 
 /**
  * Execute a sequence of operations.
@@ -81,37 +83,77 @@ export function fetch(getRequest) {
   // make a get and unzip the response
 }
 
-export function unzip(pathToCsv) {
-  // something that unzips from a CSV and allows the output to be used for hte
-  // input of `load(data, options)`
+export function unzip() {
+  return state => {
+    const file_url =
+      'https://github.com/mihaifm/linq/releases/download/3.1.1/linq.js-3.1.1.zip';
+
+    return new Promise((resolve, reject) => {
+      request({ url: file_url, method: 'GET' }, (err, res, body) => {
+        //console.log(body);
+        resolve(body);
+        const zip = new AdmZip(body);
+        const zipEntries = zip.getEntries();
+        console.log(zipEntries.length);
+      });
+    });
+    /* get(file_url, {}, () => {
+      const zip = new AdmZip(body);
+      const zipEntries = zip.getEntries();
+      console.log(zipEntries.length);
+    }); */
+
+    // something that unzips from a CSV and allows the output to be used for hte
+    // input of `load(data, options)`
+
+    return state;
+  };
 }
 
-export function load(data, options) {
+export function load(
+  fileName,
+  datasetId,
+  tableId,
+  loadOptions,
+  bQOptions,
+  callback
+) {
   // something that loads data (from a CSV?) to BigQuery
-  state => {
-    const schema = 'Name:STRING, Age:INTEGER, Weight:FLOAT, IsMagic:BOOLEAN';
+  return state => {
+    const bigquery = new BigQuery(bQOptions);
+    // In this example, the existing table contains only the 'Name', 'Age',
+    // & 'Weight' columns. 'REQUIRED' fields cannot  be added to an existing
+    // schema, so the additional column must be 'NULLABLE'.
+    async function loadData() {
       // Retrieve destination table reference
-      const [table] = await bigquery
-        .dataset(datasetId)
-        .table(tableId)
-        .get();
+      const [table] = await bigquery.dataset(datasetId).table(tableId).get();
+
       const destinationTableRef = table.metadata.tableReference;
+
       // Set load job options
-      const options = {
-        schema: schema,
-        schemaUpdateOptions: ['ALLOW_FIELD_ADDITION'],
-        writeDisposition: 'WRITE_APPEND',
-        destinationTable: destinationTableRef,
-      };
+      const options = { ...loadOptions, destinationTableRef };
+
       // Load data from a local file into the table
       const [job] = await bigquery
         .dataset(datasetId)
         .table(tableId)
         .load(fileName, options);
+
       console.log(`Job ${job.id} completed.`);
       console.log('New Schema:');
       console.log(job.configuration.load.schema.fields);
-  }
+
+      // Check the job's status for errors
+      const errors = job.status.errors;
+      if (errors && errors.length > 0) {
+        throw errors;
+      }
+
+      console.log('hello?');
+      return state;
+    }
+    return loadData();
+  };
 }
 
 /**

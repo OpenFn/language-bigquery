@@ -15,6 +15,7 @@
   ],
   "dependencies": {
     "@google-cloud/bigquery": "^5.2.0",
+    "adm-zip": "^0.4.16",
     "cheerio": "^1.0.0-rc.3",
     "cheerio-tableparser": "^1.0.1",
     "csv-parse": "^4.10.1",
