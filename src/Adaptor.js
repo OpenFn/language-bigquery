@@ -81,32 +81,36 @@ export function get(path, params, callback) {
   };
 }
 
-export function fetch(getRequest) {
+export function fetch(urlToFile) {
+  return state => {
+    return new Promise((resolve, reject) => {
+      request(
+        { url: urlToFile, method: 'GET', encoding: null },
+        (err, res, body) => {
+          console.log(body);
+          resolve(body);
+          //state.data.body = body;
+        }
+      );
+    }).then(data => {
+      return { ...state, response: { body: data } };
+    });
+  };
   // make a get and unzip the response
 }
 
-export function unzip() {
+export function unzip(pathToSave) {
+  // something that unzips from a CSV and allows the output to be used for hte
+  // input of `load(data, options)`
+
   return state => {
-    const file_url =
-      'https://github.com/mihaifm/linq/releases/download/3.1.1/linq.js-3.1.1.zip';
+    let { response } = state;
+    console.log(response.body);
 
-    return new Promise((resolve, reject) => {
-      request({ url: file_url, method: 'GET' }, (err, res, body) => {
-        //console.log(body);
-        resolve(body);
-        const zip = new AdmZip(body);
-        const zipEntries = zip.getEntries();
-        console.log(zipEntries.length);
-      });
-    });
-    /* get(file_url, {}, () => {
-      const zip = new AdmZip(body);
-      const zipEntries = zip.getEntries();
-      console.log(zipEntries.length);
-    }); */
-
-    // something that unzips from a CSV and allows the output to be used for hte
-    // input of `load(data, options)`
+    const zip = new AdmZip(response.body);
+    const zipEntries = zip.getEntries();
+    console.log(zipEntries.length);
+    zip.extractAllTo(pathToSave, true);
 
     return state;
   };
