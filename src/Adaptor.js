@@ -1,6 +1,7 @@
 /** @module Adaptor */
 import { req, rawRequest } from './Client';
 import { setAuth, setUrl } from './Utils';
+import 'regenerator-runtime/runtime.js';
 import {
   execute as commonExecute,
   expandReferences,
@@ -12,6 +13,7 @@ import fs from 'fs';
 import parse from 'csv-parse';
 import AdmZip from 'adm-zip';
 import request from 'request';
+import { BigQuery } from '@google-cloud/bigquery';
 
 /**
  * Execute a sequence of operations.
@@ -112,15 +114,18 @@ export function unzip() {
 
 export function load(
   fileName,
+  projectId,
   datasetId,
   tableId,
   loadOptions,
-  bQOptions,
   callback
 ) {
   // something that loads data (from a CSV?) to BigQuery
   return state => {
-    const bigquery = new BigQuery(bQOptions);
+    const bigquery = new BigQuery({
+      credentials: state.configuration,
+      projectId,
+    });
     // In this example, the existing table contains only the 'Name', 'Age',
     // & 'Weight' columns. 'REQUIRED' fields cannot  be added to an existing
     // schema, so the additional column must be 'NULLABLE'.
