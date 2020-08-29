@@ -16,8 +16,6 @@
   "dependencies": {
     "@google-cloud/bigquery": "^5.2.0",
     "adm-zip": "^0.4.16",
-    "cheerio": "^1.0.0-rc.3",
-    "cheerio-tableparser": "^1.0.1",
     "csv-parse": "^4.10.1",
     "import": "0.0.6",
     "language-common": "github:openfn/language-common#v0.3.0",
