@@ -61,11 +61,13 @@ export function unzip(input, output) {
   // input of `load(data, options)`
 
   return state => {
+    console.log('about to do the ting.');
     return new Promise((resolve, reject) => {
       const zip = new AdmZip(input);
       const zipEntries = zip.getEntries();
-      console.log(`Unzipping ${zipEntries.length} file(s).`);
+      console.log(`Unzipping ${zipEntries.length} file(s) from ${input}`);
       zip.extractAllTo(output, true);
+      resolve();
     }).then(() => {
       console.log(`Extracted all to ${output}`);
       return state;
@@ -128,7 +130,7 @@ export function load(
         files.forEach(function (file) {
           console.log(file);
           // Do whatever you want to do with the file
-          return loadData(`${dirPath}/${file}`);
+          loadData(`${dirPath}/${file}`);
         });
       });
     }).then(() => {
