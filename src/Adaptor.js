@@ -92,7 +92,7 @@ export function load(
     // In this example, the existing table contains only the 'Name', 'Age',
     // & 'Weight' columns. 'REQUIRED' fields cannot  be added to an existing
     // schema, so the additional column must be 'NULLABLE'.
-    async function loadData(fileName) {
+    async function loadData(files) {
       // Retrieve destination table reference
       const [table] = await bigquery.dataset(datasetId).table(tableId).get();
 
@@ -101,37 +101,33 @@ export function load(
       // Set load job options
       const options = { ...loadOptions, destinationTableRef };
 
-      // Load data from a local file into the table
-      const [job] = await bigquery
-        .dataset(datasetId)
-        .table(tableId)
-        .load(fileName, options);
+      for (const file of files) {
+        const fileName = `${dirPath}/${file}`;
+        const [job] = await bigquery
+          .dataset(datasetId)
+          .table(tableId)
+          .load(fileName, options);
 
-      console.log(`Job ${job.id} completed.`);
-      console.log('New Schema:');
-      console.log(job.configuration.load.schema.fields);
-
-      // Check the job's status for errors
-      const errors = job.status.errors;
-      if (errors && errors.length > 0) {
-        throw errors;
+        console.log(`Job ${job.id} completed.`);
+        console.log('New Schema:');
+        console.log(job.configuration.load.schema.fields);
+        // Check the job's status for errors
+        const errors = job.status.errors;
+        if (errors && errors.length > 0) {
+          throw errors;
+        }
       }
 
       return state;
     }
 
     return new Promise((resolve, reject) => {
-      fs.readdir(dirPath, function (err, files) {
+      return fs.readdir(dirPath, function (err, files) {
         //handling error
         if (err) {
           return console.log('Unable to scan directory: ' + err);
         }
-        //listing all files using forEach
-        files.forEach(function (file) {
-          console.log(file);
-          // Do whatever you want to do with the file
-          loadData(`${dirPath}/${file}`);
-        });
+        loadData(files);
       });
     }).then(() => {
       console.log('all done');
