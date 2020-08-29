@@ -64,17 +64,17 @@ export function unzip(input, output) {
     return new Promise((resolve, reject) => {
       const zip = new AdmZip(input);
       const zipEntries = zip.getEntries();
-      console.log(zipEntries.length);
+      console.log(`Unzipping ${zipEntries.length} file(s).`);
       zip.extractAllTo(output, true);
     }).then(() => {
-      console.log('extracted!');
+      console.log(`Extracted all to ${output}`);
       return state;
     });
   };
 }
 
 export function load(
-  fileName,
+  dirPath,
   projectId,
   datasetId,
   tableId,
@@ -90,7 +90,7 @@ export function load(
     // In this example, the existing table contains only the 'Name', 'Age',
     // & 'Weight' columns. 'REQUIRED' fields cannot  be added to an existing
     // schema, so the additional column must be 'NULLABLE'.
-    async function loadData() {
+    async function loadData(fileName) {
       // Retrieve destination table reference
       const [table] = await bigquery.dataset(datasetId).table(tableId).get();
 
@@ -117,7 +117,24 @@ export function load(
 
       return state;
     }
-    return loadData();
+
+    return new Promise((resolve, reject) => {
+      fs.readdir(dirPath, function (err, files) {
+        //handling error
+        if (err) {
+          return console.log('Unable to scan directory: ' + err);
+        }
+        //listing all files using forEach
+        files.forEach(function (file) {
+          console.log(file);
+          // Do whatever you want to do with the file
+          return loadData(`${dirPath}/${file}`);
+        });
+      });
+    }).then(() => {
+      console.log('all done');
+      return state;
+    });
   };
 }
 
