@@ -45,7 +45,7 @@ export function fetch(uri, output) {
         .pipe(file)
         .on('finish', () => {
           console.log(`The file is finished downloading.`);
-          resolve();
+          resolve(state);
         })
         .on('error', error => {
           reject(error);
@@ -122,12 +122,13 @@ export function load(
     }
 
     return new Promise((resolve, reject) => {
+      console.log('Google Big Query: loading files');
       return fs.readdir(dirPath, function (err, files) {
         //handling error
         if (err) {
           return console.log('Unable to scan directory: ' + err);
         }
-        loadData(files);
+        resolve(loadData(files));
       });
     }).then(() => {
       console.log('all done');
