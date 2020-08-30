@@ -1,5 +1,5 @@
 alterState(state => {
-  console.log(`Started at: ${Date()}`);
+  console.log(`Started ${state.year}/${state.month} at: ${Date()}`);
   return state;
 });
 
@@ -9,16 +9,16 @@ fetch(
     state.month +
     '/ALL/HS?token=' +
     state.token,
-  `/home/taylor/Desktop/vcs/${state.year}${state.month}.zip`
+  `/home/taylor/${state.year}${state.month}.zip`
 );
 
 unzip(
-  `/home/taylor/Desktop/vcs/${state.year}${state.month}.zip`,
-  `/home/taylor/Desktop/vcs/${state.year}${state.month}`
+  `/home/taylor/${state.year}${state.month}.zip`,
+  `/home/taylor/${state.year}${state.month}`
 );
 
 load(
-  `/home/taylor/Desktop/vcs/${state.year}${state.month}`,
+  `/home/taylor/${state.year}${state.month}`,
   'value-chain-solutions', // project
   'test01', // dataset
   'fact_comtrade_2', // table
@@ -36,13 +36,13 @@ alterState(state => {
   console.log(
     `Upload done for ${state.year}/${state.month}, removing unzipped csv`
   );
-  const dir = `/home/taylor/Desktop/vcs/${state.year}${state.month}`;
+  const dir = `/home/taylor/${state.year}${state.month}`;
   fs.rmdir(dir, { recursive: true }, err => {
     if (err) {
       throw err;
     }
     console.log(`${dir} is deleted!`);
   });
-  console.log(`Finished at: ${Date()}`);
+  console.log(`Finished ${state.year}/${state.month} at: ${Date()}`);
   return state;
 });
