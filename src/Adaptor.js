@@ -8,7 +8,6 @@ import {
 } from 'language-common';
 import fs from 'fs';
 import parse from 'csv-parse';
-import AdmZip from 'adm-zip';
 import unzipper from 'unzipper';
 import request from 'request';
 import { BigQuery } from '@google-cloud/bigquery';
