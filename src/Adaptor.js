@@ -9,6 +9,7 @@ import {
 import fs from 'fs';
 import parse from 'csv-parse';
 import AdmZip from 'adm-zip';
+import unzipper from 'unzipper';
 import request from 'request';
 import { BigQuery } from '@google-cloud/bigquery';
 
@@ -56,18 +57,16 @@ export function fetch(uri, output) {
   };
 }
 
+// something that unzips from a CSV and allows the output to be used for hte
+// input of `load(data, options)`
 export function unzip(input, output) {
-  // something that unzips from a CSV and allows the output to be used for hte
-  // input of `load(data, options)`
-
   return state => {
-    console.log('about to do the ting.');
+    console.log(`Unzipping ${input}`);
     return new Promise((resolve, reject) => {
-      const zip = new AdmZip(input);
-      const zipEntries = zip.getEntries();
-      console.log(`Unzipping ${zipEntries.length} file(s) from ${input}`);
-      zip.extractAllTo(output, true);
-      resolve();
+      return fs
+        .createReadStream(input)
+        .pipe(unzipper.Extract({ path: output }))
+        .on('finish', resolve);
     }).then(() => {
       console.log(`Extracted all to ${output}`);
       return state;
