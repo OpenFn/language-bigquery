@@ -230,6 +230,7 @@ exports.fs = fs;
 export {
   alterState,
   dataPath,
+  combine,
   dataValue,
   each,
   field,
