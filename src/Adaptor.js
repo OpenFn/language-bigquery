@@ -1,6 +1,7 @@
 /** @module Adaptor */
 import { setAuth, setUrl } from './Utils';
 import 'regenerator-runtime/runtime.js';
+import languageHttp from 'language-http';
 import {
   execute as commonExecute,
   expandReferences,
@@ -11,6 +12,7 @@ import https from 'https';
 import parse from 'csv-parse';
 import unzipper from 'unzipper';
 import request from 'request';
+import { parseStringPromise } from 'xml2js';
 import { BigQuery } from '@google-cloud/bigquery';
 
 /**
@@ -179,6 +181,15 @@ export function load(
   };
 }
 
+export function parseXML(xml, options) {
+  return state => {
+    return parseStringPromise(xml, options).then(result => {
+      console.log('Finished parsing. Result available in state.data');
+      return composeNextState(state, result);
+    });
+  };
+}
+
 /**
  * CSV-Parse for CSV conversion to JSON
  * @public
@@ -224,6 +235,8 @@ export function parseCSV(target, config) {
     });
   };
 }
+
+exports.languageHttp = languageHttp;
 
 exports.fs = fs;
 

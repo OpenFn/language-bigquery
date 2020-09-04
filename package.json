@@ -1,6 +1,6 @@
 {
   "name": "language-bigquery",
-  "version": "0.1.3",
+  "version": "1.0.0",
   "description": "A Google BigQuery language package for use with Open Function",
   "main": "lib/index.js",
   "scripts": {
@@ -18,8 +18,10 @@
     "csv-parse": "^4.10.1",
     "import": "0.0.6",
     "language-common": "github:openfn/language-common#v0.3.0",
+    "language-http": "github:openfn/language-http#v2.4.11",
     "request": "^2.72.0",
-    "unzipper": "^0.10.11"
+    "unzipper": "^0.10.11",
+    "xml2js": "^0.4.23"
   },
   "devDependencies": {
     "@babel/cli": "^7.8.4",
