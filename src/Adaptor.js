@@ -1,18 +1,18 @@
 /** @module Adaptor */
-import { req, rawRequest } from './Client';
 import { setAuth, setUrl } from './Utils';
 import 'regenerator-runtime/runtime.js';
+import languageHttp from 'language-http';
 import {
   execute as commonExecute,
   expandReferences,
   composeNextState,
 } from 'language-common';
-import cheerio from 'cheerio';
-import cheerioTableparser from 'cheerio-tableparser';
 import fs from 'fs';
+import https from 'https';
 import parse from 'csv-parse';
-import AdmZip from 'adm-zip';
+import unzipper from 'unzipper';
 import request from 'request';
+import { parseStringPromise } from 'xml2js';
 import { BigQuery } from '@google-cloud/bigquery';
 
 /**
@@ -38,86 +38,89 @@ export function execute(...operations) {
   };
 }
 
-/**
- * Make a GET request
- * @public
- * @example
- *  get("/myendpoint", {
- *      query: {foo: "bar", a: 1},
- *      headers: {"content-type": "application/json"},
- *      authentication: {username: "user", password: "pass"}
- *    },
- *    function(state) {
- *      return state;
- *    }
- *  )
- * @function
- * @param {string} path - Path to resource
- * @param {object} params - Query, Headers and Authentication parameters
- * @param {function} callback - (Optional) Callback function
- * @returns {Operation}
- */
-export function get(path, params, callback) {
-  return state => {
-    const url = setUrl(state.configuration, path);
-
-    const {
-      query,
-      headers,
-      authentication,
-      body,
-      formData,
-      options,
-      ...rest
-    } = expandReferences(params)(state);
-
-    const auth = setAuth(state.configuration, authentication);
-
-    return req('GET', { url, query, auth, headers, rest }).then(response => {
-      const nextState = composeNextState(state, response);
-      if (callback) return callback(nextState);
-      return nextState;
-    });
-  };
-}
-
-export function fetch(urlToFile) {
+export function download(url, dest) {
   return state => {
     return new Promise((resolve, reject) => {
-      request(
-        { url: urlToFile, method: 'GET', encoding: null },
-        (err, res, body) => {
-          console.log(body);
-          resolve(body);
-          //state.data.body = body;
+      console.log(url);
+      console.log(dest);
+      const file = fs.createWriteStream(dest, { flags: 'wx' });
+
+      const request = https.get(url, response => {
+        if (response.statusCode === 200) {
+          response.pipe(file);
+        } else {
+          file.close();
+          fs.unlink(dest, () => {}); // Delete temp file
+          reject(
+            `Server responded with ${response.statusCode}: ${response.statusMessage}.`
+          );
         }
-      );
-    }).then(data => {
-      return { ...state, response: { body: data } };
+      });
+
+      request.on('error', err => {
+        file.close();
+        fs.unlink(dest, () => {}); // Delete temp file
+        reject(err.message);
+      });
+
+      file.on('finish', () => {
+        resolve();
+      });
+
+      file.on('error', err => {
+        file.close();
+
+        if (err.code === 'EEXIST') {
+          reject('File already exists');
+        } else {
+          fs.unlink(dest, () => {}); // Delete temp file
+          reject(err.message);
+        }
+      });
     });
   };
-  // make a get and unzip the response
 }
 
-export function unzip(pathToSave) {
-  // something that unzips from a CSV and allows the output to be used for hte
-  // input of `load(data, options)`
-
+export function fetch(uri, output) {
   return state => {
-    let { response } = state;
-    console.log(response.body);
+    /* Create an empty file where we can save data */
+    let file = fs.createWriteStream(output);
+    /* Using Promises so that we can use the ASYNC AWAIT syntax */
+    return new Promise((resolve, reject) => {
+      let stream = request({ uri })
+        .pipe(file)
+        .on('finish', () => {
+          console.log(`The file is finished downloading.`);
+          resolve(state);
+        })
+        .on('error', error => {
+          reject(error);
+        });
+    }).catch(error => {
+      console.log(`Something happened: ${error}`);
+    });
+  };
+}
 
-    const zip = new AdmZip(response.body);
-    const zipEntries = zip.getEntries();
-    console.log(zipEntries.length);
-    zip.extractAllTo(pathToSave, true);
-
-    return state;
+// something that unzips from a CSV and allows the output to be used for hte
+// input of `load(data, options)`
+export function unzip(input, output) {
+  return state => {
+    console.log(`Unzipping ${input}`);
+    return new Promise((resolve, reject) => {
+      return fs
+        .createReadStream(input)
+        .pipe(unzipper.Extract({ path: output }))
+        .on('finish', resolve);
+    }).then(() => {
+      console.log(`Extracted all to ${output}`);
+      return state;
+    });
   };
 }
 
 export function load(
-  fileName,
+  dirPath,
   projectId,
   datasetId,
   tableId,
@@ -133,7 +136,7 @@ export function load(
     // In this example, the existing table contains only the 'Name', 'Age',
     // & 'Weight' columns. 'REQUIRED' fields cannot  be added to an existing
     // schema, so the additional column must be 'NULLABLE'.
-    async function loadData() {
+    async function loadData(files) {
       // Retrieve destination table reference
       const [table] = await bigquery.dataset(datasetId).table(tableId).get();
 
@@ -142,25 +145,48 @@ export function load(
       // Set load job options
       const options = { ...loadOptions, destinationTableRef };
 
-      // Load data from a local file into the table
-      const [job] = await bigquery
-        .dataset(datasetId)
-        .table(tableId)
-        .load(fileName, options);
+      for (const file of files) {
+        const fileName = `${dirPath}/${file}`;
+        const [job] = await bigquery
+          .dataset(datasetId)
+          .table(tableId)
+          .load(fileName, options);
 
-      console.log(`Job ${job.id} completed.`);
-      console.log('New Schema:');
-      console.log(job.configuration.load.schema.fields);
-
-      // Check the job's status for errors
-      const errors = job.status.errors;
-      if (errors && errors.length > 0) {
-        throw errors;
+        console.log(`Job ${job.id} completed.`);
+        console.log('New Schema:');
+        console.log(job.configuration.load.schema.fields);
+        // Check the job's status for errors
+        const errors = job.status.errors;
+        if (errors && errors.length > 0) {
+          throw errors;
+        }
       }
 
       return state;
     }
-    return loadData();
+
+    return new Promise((resolve, reject) => {
+      console.log('Google Big Query: loading files');
+      return fs.readdir(dirPath, function (err, files) {
+        //handling error
+        if (err) {
+          return console.log('Unable to scan directory: ' + err);
+        }
+        resolve(loadData(files));
+      });
+    }).then(() => {
+      console.log('all done');
+      return state;
+    });
+  };
+}
+
+export function parseXML(xml, options) {
+  return state => {
+    return parseStringPromise(xml, options).then(result => {
+      console.log('Finished parsing. Result available in state.data');
+      return composeNextState(state, result);
+    });
   };
 }
 
@@ -210,11 +236,14 @@ export function parseCSV(target, config) {
   };
 }
 
+exports.languageHttp = languageHttp;
+
 exports.fs = fs;
 
 export {
   alterState,
   dataPath,
+  combine,
   dataValue,
   each,
   field,

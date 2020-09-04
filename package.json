@@ -1,6 +1,6 @@
 {
   "name": "language-bigquery",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A Google BigQuery language package for use with Open Function",
   "main": "lib/index.js",
   "scripts": {
@@ -15,13 +15,13 @@
   ],
   "dependencies": {
     "@google-cloud/bigquery": "^5.2.0",
-    "adm-zip": "^0.4.16",
-    "cheerio": "^1.0.0-rc.3",
-    "cheerio-tableparser": "^1.0.1",
     "csv-parse": "^4.10.1",
     "import": "0.0.6",
     "language-common": "github:openfn/language-common#v0.3.0",
-    "request": "^2.72.0"
+    "language-http": "github:openfn/language-http#v2.4.11",
+    "request": "^2.72.0",
+    "unzipper": "^0.10.11",
+    "xml2js": "^0.4.23"
   },
   "devDependencies": {
     "@babel/cli": "^7.8.4",
