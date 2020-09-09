@@ -12,8 +12,10 @@ import https from 'https';
 import parse from 'csv-parse';
 import unzipper from 'unzipper';
 import request from 'request';
+import { Parser } from 'json2csv';
 import { parseStringPromise } from 'xml2js';
 import { BigQuery } from '@google-cloud/bigquery';
+import { resolve } from 'path';
 
 /**
  * Execute a sequence of operations.
@@ -188,6 +190,12 @@ export function parseXML(xml, options) {
       return composeNextState(state, result);
     });
   };
+}
+
+export function convertToCsv(data, options) {
+  const parser = new Parser(options);
+  const csv = parser.parse(data);
+  return csv;
 }
 
 /**
