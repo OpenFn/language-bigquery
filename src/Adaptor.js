@@ -1,19 +1,12 @@
 /** @module Adaptor */
-import { setAuth, setUrl } from './Utils';
 import 'regenerator-runtime/runtime.js';
-import languageHttp from 'language-http';
 import {
   execute as commonExecute,
   expandReferences,
   composeNextState,
-} from 'language-common';
+} from '@openfn/language-common';
 import fs from 'fs';
-import https from 'https';
 import parse from 'csv-parse';
-import unzipper from 'unzipper';
-import request from 'request';
-import { Parser } from 'json2csv';
-import { parseStringPromise } from 'xml2js';
 import { BigQuery } from '@google-cloud/bigquery';
 import { resolve } from 'path';
 
@@ -40,87 +33,32 @@ export function execute(...operations) {
   };
 }
 
-export function download(url, dest) {
-  return state => {
-    return new Promise((resolve, reject) => {
-      console.log(url);
-      console.log(dest);
-      const file = fs.createWriteStream(dest, { flags: 'wx' });
-
-      const request = https.get(url, response => {
-        if (response.statusCode === 200) {
-          response.pipe(file);
-        } else {
-          file.close();
-          fs.unlink(dest, () => {}); // Delete temp file
-          reject(
-            `Server responded with ${response.statusCode}: ${response.statusMessage}.`
-          );
-        }
-      });
-
-      request.on('error', err => {
-        file.close();
-        fs.unlink(dest, () => {}); // Delete temp file
-        reject(err.message);
-      });
-
-      file.on('finish', () => {
-        resolve();
-      });
-
-      file.on('error', err => {
-        file.close();
-
-        if (err.code === 'EEXIST') {
-          reject('File already exists');
-        } else {
-          fs.unlink(dest, () => {}); // Delete temp file
-          reject(err.message);
-        }
-      });
-    });
-  };
-}
-
-export function fetch(uri, output) {
-  return state => {
-    /* Create an empty file where we can save data */
-    let file = fs.createWriteStream(output);
-    /* Using Promises so that we can use the ASYNC AWAIT syntax */
-    return new Promise((resolve, reject) => {
-      let stream = request({ uri })
-        .pipe(file)
-        .on('finish', () => {
-          console.log(`The file is finished downloading.`);
-          resolve(state);
-        })
-        .on('error', error => {
-          reject(error);
-        });
-    }).catch(error => {
-      console.log(`Something happened: ${error}`);
-    });
-  };
-}
-
-// something that unzips from a CSV and allows the output to be used for hte
-// input of `load(data, options)`
-export function unzip(input, output) {
-  return state => {
-    console.log(`Unzipping ${input}`);
-    return new Promise((resolve, reject) => {
-      return fs
-        .createReadStream(input)
-        .pipe(unzipper.Extract({ path: output }))
-        .on('finish', resolve);
-    }).then(() => {
-      console.log(`Extracted all to ${output}`);
-      return state;
-    });
-  };
-}
-
+/**
+ * Load files to BigQuery
+ * @public
+ * @example
+ * load(
+ *   './tmp/files',
+ *   'my-bg-project',
+ *   'test01',
+ *   'product-codes',
+ *   {
+ *     schema: 'FREQ:STRING,DATATYPE:STRING,PRODUCTCODE:STRING,PARTNER:STRING',
+ *     writeDisposition: 'WRITE_APPEND',
+ *     skipLeadingRows: 1,
+ *     schemaUpdateOptions: ['ALLOW_FIELD_ADDITION'],
+ *     createDisposition: 'CREATE_IF_NEEDED',
+ *   }
+ * )
+ * @function
+ * @param {string} dirPath - the path to your local directory
+ * @param {string} projectId - your bigquery project id
+ * @param {string} datasetId - your bigquery dataset id
+ * @param {string} tableId - the name of the table you'd like to load
+ * @param {object} loadOptions - options to pass to the bigquery.load() API
+ * @param {function} callback - and optional callback
+ * @returns {Operation}
+ */
 export function load(
   dirPath,
   projectId,
@@ -183,21 +121,6 @@ export function load(
   };
 }
 
-export function parseXML(xml, options) {
-  return state => {
-    return parseStringPromise(xml, options).then(result => {
-      console.log('Finished parsing. Result available in state.data');
-      return composeNextState(state, result);
-    });
-  };
-}
-
-export function convertToCsv(data, options) {
-  const parser = new Parser(options);
-  const csv = parser.parse(data);
-  return csv;
-}
-
 /**
  * CSV-Parse for CSV conversion to JSON
  * @public
@@ -244,10 +167,6 @@ export function parseCSV(target, config) {
   };
 }
 
-exports.languageHttp = languageHttp;
-
-exports.fs = fs;
-
 export {
   alterState,
   dataPath,
@@ -256,7 +175,8 @@ export {
   each,
   field,
   fields,
+  http,
   lastReferenceValue,
   merge,
   sourceValue,
-} from 'language-common';
+} from '@openfn/language-common';
