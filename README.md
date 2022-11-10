@@ -1,4 +1,8 @@
-# Language BigQuery [![Build Status](https://travis-ci.org/OpenFn/language-bigquery.svg?branch=master)](https://travis-ci.org/OpenFn/language-bigquery)
+# ⚠️ MOVED TO [OpenFn/adaptors](https://github.com/OpenFn/adaptors)! ⚠️
+
+N.B.: New versions are available at: https://github.com/OpenFn/adaptors/tree/main/packages/bigquery
+
+# Language BigQuery (archived)
 
 Language Pack for building expressions and operations to make HTTP calls.
 
